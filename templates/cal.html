@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EventEase</title>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1/index.global.min.js"></script>
+    <style>
+        /* Simple modal styling */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+        }
+
+        .modal-header, .modal-footer {
+            padding: 10px;
+        }
+
+        .modal-footer {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div id="calendar"></div>
+
+    <!-- Modal for adding event details -->
+    <div id="eventModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Event</h2>
+            </div>
+            <div class="modal-body">
+                <form id="eventForm">
+                    <label for="eventTitle">Event Title:</label><br>
+                    <input type="text" id="eventTitle" name="eventTitle"><br><br>
+                    <label for="eventDescription">Event Description:</label><br>
+                    <textarea id="eventDescription" name="eventDescription"></textarea><br><br>
+                    <input type="hidden" id="eventDate">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="saveEventBtn">Save Event</button>
+                <button onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let calendarEl = document.getElementById('calendar');
+
+        // Load the events passed from Flask (from the backend)
+        let eventsFromServer = {{ events | tojson }};  // This will be filled with events from the backend
+
+        // Initialize the FullCalendar with events from the backend
+        let calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            events: eventsFromServer,  // Load existing events into the calendar
+            dateClick: function(info) {
+                // Show the modal when a date is clicked
+                openModal(info.dateStr);
+            },
+            eventClick: function(info) {
+                // Optionally show event details when an event is clicked
+                alert('Event: ' + info.event.title + '\nDescription: ' + info.event.extendedProps.description);
+            }
+        });
+
+        calendar.render();
+
+        // Function to open the modal and set the event date
+        function openModal(date) {
+            document.getElementById('eventDate').value = date;
+            document.getElementById('eventModal').style.display = 'block';
+        }
+
+        // Function to close the modal
+        function closeModal() {
+            document.getElementById('eventModal').style.display = 'none';
+        }
+
+        // Function to clear the form fields after saving the event
+        function clearForm() {
+            document.getElementById('eventTitle').value = '';
+            document.getElementById('eventDescription').value = '';
+        }
+
+        // Event listener for the "Save Event" button
+        document.getElementById('saveEventBtn').addEventListener('click', function() {
+            let eventTitle = document.getElementById('eventTitle').value;
+            let eventDescription = document.getElementById('eventDescription').value;
+            let eventDate = document.getElementById('eventDate').value;
+
+            // Send the event data to the Flask backend
+            fetch('/add-event', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    date: eventDate,
+                    title: eventTitle,
+                    description: eventDescription
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Add the new event to the calendar
+                calendar.addEvent({
+                    title: data.event.title,
+                    start: data.event.start,
+                    description: data.event.description
+                });
+                alert(data.message);  // Show a success message
+                clearForm();  // Clear the form fields after saving
+                closeModal();  // Close the modal after saving
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    </script>
+</body>
+</html>
