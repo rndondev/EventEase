@@ -6,43 +6,19 @@
     <title>EventEase</title>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1/index.global.min.js"></script>
     <style>
-        /* Simple modal styling */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-        }
-
-        .modal-content {
-            background-color: #fff;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-        }
-
-        .modal-header, .modal-footer {
-            padding: 10px;
-        }
-
-        .modal-footer {
-            text-align: right;
-        }
+        .modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); }
+        .modal-content { background-color: #fff; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; }
+        .modal-header, .modal-footer { padding: 10px; }
+        .modal-footer { text-align: right; }
     </style>
 </head>
 <body>
     <div id="calendar"></div>
 
-    <!-- Modal for adding event details -->
     <div id="eventModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Add Event</h2>
+                <h2 id="modalTitle">Add/Edit Event</h2>
             </div>
             <div class="modal-body">
                 <form id="eventForm">
@@ -50,11 +26,15 @@
                     <input type="text" id="eventTitle" name="eventTitle"><br><br>
                     <label for="eventDescription">Event Description:</label><br>
                     <textarea id="eventDescription" name="eventDescription"></textarea><br><br>
+                    <label>To-Do List:</label><br>
+                    <div id="todoListContainer"></div>
+                    <button type="button" onclick="addTodoItem()">Add To-Do Item</button>
                     <input type="hidden" id="eventDate">
                 </form>
             </div>
             <div class="modal-footer">
                 <button id="saveEventBtn">Save Event</button>
+                <button id="deleteEventBtn" style="display: none;">Delete Event</button>
                 <button onclick="closeModal()">Cancel</button>
             </div>
         </div>
@@ -62,76 +42,128 @@
 
     <script>
         let calendarEl = document.getElementById('calendar');
+        let eventsFromServer = {{ events | tojson }};
+        let selectedEvent = null;
 
-        // Load the events passed from Flask (from the backend)
-        let eventsFromServer = {{ events | tojson }};  // This will be filled with events from the backend
-
-        // Initialize the FullCalendar with events from the backend
         let calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            events: eventsFromServer,  // Load existing events into the calendar
+            events: eventsFromServer,
             dateClick: function(info) {
-                // Show the modal when a date is clicked
                 openModal(info.dateStr);
             },
             eventClick: function(info) {
-                // Optionally show event details when an event is clicked
-                alert('Event: ' + info.event.title + '\nDescription: ' + info.event.extendedProps.description);
+                selectedEvent = info.event;
+                openModal(info.event.startStr, info.event.title, info.event.extendedProps.description, info.event.extendedProps.todoList);
             }
         });
 
         calendar.render();
 
-        // Function to open the modal and set the event date
-        function openModal(date) {
+        function openModal(date, title = '', description = '', todoList = []) {
             document.getElementById('eventDate').value = date;
+            document.getElementById('eventTitle').value = title;
+            document.getElementById('eventDescription').value = description;
+            document.getElementById('todoListContainer').innerHTML = '';
+            
+            todoList.forEach((item, index) => {
+                addTodoItem(item.text, item.done);
+            });
+
+            // Show the Delete button if an existing event is being edited
+            document.getElementById('deleteEventBtn').style.display = selectedEvent ? 'inline' : 'none';
+            
             document.getElementById('eventModal').style.display = 'block';
         }
 
-        // Function to close the modal
         function closeModal() {
             document.getElementById('eventModal').style.display = 'none';
+            selectedEvent = null;
         }
 
-        // Function to clear the form fields after saving the event
         function clearForm() {
             document.getElementById('eventTitle').value = '';
             document.getElementById('eventDescription').value = '';
+            document.getElementById('todoListContainer').innerHTML = '';
         }
 
-        // Event listener for the "Save Event" button
+        function addTodoItem(text = '', done = false) {
+            let container = document.getElementById('todoListContainer');
+            let todoDiv = document.createElement('div');
+            let checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = done;
+            checkbox.className = 'todo-checkbox';
+            
+            let input = document.createElement('input');
+            input.type = 'text';
+            input.value = text;
+            input.className = 'todo-text';
+
+            todoDiv.appendChild(checkbox);
+            todoDiv.appendChild(input);
+            container.appendChild(todoDiv);
+        }
+
         document.getElementById('saveEventBtn').addEventListener('click', function() {
             let eventTitle = document.getElementById('eventTitle').value;
             let eventDescription = document.getElementById('eventDescription').value;
             let eventDate = document.getElementById('eventDate').value;
 
-            // Send the event data to the Flask backend
+            let todoItems = Array.from(document.querySelectorAll('#todoListContainer div')).map(todoDiv => {
+                return {
+                    text: todoDiv.querySelector('.todo-text').value,
+                    done: todoDiv.querySelector('.todo-checkbox').checked
+                };
+            });
+
             fetch('/add-event', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     date: eventDate,
                     title: eventTitle,
-                    description: eventDescription
+                    description: eventDescription,
+                    todoList: todoItems
                 })
             })
             .then(response => response.json())
             .then(data => {
-                // Add the new event to the calendar
-                calendar.addEvent({
-                    title: data.event.title,
-                    start: data.event.start,
-                    description: data.event.description
-                });
-                alert(data.message);  // Show a success message
-                clearForm();  // Clear the form fields after saving
-                closeModal();  // Close the modal after saving
+                if (selectedEvent) {
+                    selectedEvent.setProp('title', data.event.title);
+                    selectedEvent.setExtendedProp('description', data.event.description);
+                    selectedEvent.setExtendedProp('todoList', data.event.todoList);
+                } else {
+                    calendar.addEvent({
+                        id: eventTitle + eventDate,
+                        title: data.event.title,
+                        start: data.event.start,
+                        description: data.event.description,
+                        todoList: data.event.todoList
+                    });
+                }
+                alert(data.message);
+                clearForm();
+                closeModal();
             })
-            .catch(error => {
-                console.error('Error:', error);
-            });
+            .catch(error => console.error('Error:', error));
+        });
+
+        // Delete event function
+        document.getElementById('deleteEventBtn').addEventListener('click', function() {
+            if (selectedEvent) {
+                selectedEvent.remove();
+                fetch(`/delete-event`, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: selectedEvent.id })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    closeModal();
+                })
+                .catch(error => console.error('Error:', error));
+            }
         });
     </script>
 </body>
