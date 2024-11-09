@@ -105,48 +105,52 @@
         }
 
         document.getElementById('saveEventBtn').addEventListener('click', function() {
-            let eventTitle = document.getElementById('eventTitle').value;
-            let eventDescription = document.getElementById('eventDescription').value;
-            let eventDate = document.getElementById('eventDate').value;
+    let eventTitle = document.getElementById('eventTitle').value;
+    let eventDescription = document.getElementById('eventDescription').value;
+    let eventDate = document.getElementById('eventDate').value;
+    let eventId = selectedEvent ? selectedEvent.id : null; // Keep event ID for updates
 
-            let todoItems = Array.from(document.querySelectorAll('#todoListContainer div')).map(todoDiv => {
-                return {
-                    text: todoDiv.querySelector('.todo-text').value,
-                    done: todoDiv.querySelector('.todo-checkbox').checked
-                };
+    let todoItems = Array.from(document.querySelectorAll('#todoListContainer div')).map(todoDiv => {
+        return {
+            text: todoDiv.querySelector('.todo-text').value,
+            done: todoDiv.querySelector('.todo-checkbox').checked
+        };
+    });
+
+    fetch('/add-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            id: eventId,  // Pass the ID so server can update specific event
+            date: eventDate,
+            title: eventTitle,
+            description: eventDescription,
+            todoList: todoItems
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (selectedEvent) {
+            selectedEvent.setProp('title', data.event.title);  // Update title in FullCalendar
+            selectedEvent.setExtendedProp('description', data.event.description);
+            selectedEvent.setExtendedProp('todoList', data.event.todoList);
+        } else {
+            calendar.addEvent({
+                id: data.event.id,
+                title: data.event.title,
+                start: data.event.start,
+                description: data.event.description,
+                todoList: data.event.todoList
             });
+        }
+        alert(data.message);
+        clearForm();
+        closeModal();
+    })
+    .catch(error => console.error('Error:', error));
+});
 
-            fetch('/add-event', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    date: eventDate,
-                    title: eventTitle,
-                    description: eventDescription,
-                    todoList: todoItems
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (selectedEvent) {
-                    selectedEvent.setProp('title', data.event.title);
-                    selectedEvent.setExtendedProp('description', data.event.description);
-                    selectedEvent.setExtendedProp('todoList', data.event.todoList);
-                } else {
-                    calendar.addEvent({
-                        id: eventTitle + eventDate,
-                        title: data.event.title,
-                        start: data.event.start,
-                        description: data.event.description,
-                        todoList: data.event.todoList
-                    });
-                }
-                alert(data.message);
-                clearForm();
-                closeModal();
-            })
-            .catch(error => console.error('Error:', error));
-        });
+
 
         // Delete event function
         document.getElementById('deleteEventBtn').addEventListener('click', function() {
