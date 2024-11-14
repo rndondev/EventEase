@@ -10,33 +10,11 @@
         .modal-content { background-color: #fff; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; }
         .modal-header, .modal-footer { padding: 10px; }
         .modal-footer { text-align: right; }
-        .notification-modal {
-        display: none; 
-        position: fixed; 
-        z-index: 1; 
-        left: 0; 
-        top: 0; 
-        width: 100%; 
-        height: 100%; 
-        background-color: rgba(0, 0, 0, 0.5);
-    }
-    .notification-content {
-        background-color: #fff; 
-        margin: 15% auto; 
-        padding: 20px; 
-        border: 1px solid #888; 
-        width: 80%; 
-        text-align: center;
-    }
+        .notification-modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); }
+    .notification-content { background-color: #fff; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; text-align: center; }
         /* Remove bullets from lists in the notification modal */
-    .notification-content ul {
-        list-style-type: none; /* Removes default bullet points */
-        padding: 0;             /* Removes padding */
-        margin: 0;              /* Removes margin */
-    }
-    .notification-content li {
-        margin: 5px 0;         /* Adds some space between list items */
-    }
+    .notification-content ul { list-style-type: none; padding: 0; margin: 0; }
+    .notification-content li { margin: 5px 0; }
 
     </style>
 </head>
@@ -54,7 +32,7 @@
                     <input type="text" id="eventTitle" name="eventTitle"><br><br>
                     <label for="eventDescription">Event Description:</label><br>
                     <textarea id="eventDescription" name="eventDescription"></textarea><br><br>
-                    <label>To-Do List:</label><br>
+                    <label for="todoList">To-Do List:</label><br>
                     <div id="todoListContainer"></div>
                     <button type="button" onclick="addTodoItem()">Add To-Do Item</button>
                     <input type="hidden" id="eventDate">
@@ -108,7 +86,7 @@
 
 
         let calendarEl = document.getElementById('calendar');
-        let eventsFromServer = {{ events | tojson }};
+        let eventsFromServer = JSON.parse('{{ events | tojson }}');
         let selectedEvent = null;
 
         let calendar = new FullCalendar.Calendar(calendarEl, {
