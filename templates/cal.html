@@ -10,6 +10,34 @@
         .modal-content { background-color: #fff; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; }
         .modal-header, .modal-footer { padding: 10px; }
         .modal-footer { text-align: right; }
+        .notification-modal {
+        display: none; 
+        position: fixed; 
+        z-index: 1; 
+        left: 0; 
+        top: 0; 
+        width: 100%; 
+        height: 100%; 
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+    .notification-content {
+        background-color: #fff; 
+        margin: 15% auto; 
+        padding: 20px; 
+        border: 1px solid #888; 
+        width: 80%; 
+        text-align: center;
+    }
+        /* Remove bullets from lists in the notification modal */
+    .notification-content ul {
+        list-style-type: none; /* Removes default bullet points */
+        padding: 0;             /* Removes padding */
+        margin: 0;              /* Removes margin */
+    }
+    .notification-content li {
+        margin: 5px 0;         /* Adds some space between list items */
+    }
+
     </style>
 </head>
 <body>
@@ -39,8 +67,46 @@
             </div>
         </div>
     </div>
+        <!-- Notification Modal -->
+    <div id="notificationModal" class="notification-modal">
+        <div class="notification-content">
+            <h2>Today's Events</h2>
+            <div id="notificationMessage"></div>
+            <button onclick="closeNotification()">OK</button>
+        </div>
+    </div>
+
 
     <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            checkTodayEvents();
+        });
+
+        function checkTodayEvents() {
+            const today = new Date().toISOString().slice(0, 10);  // Get today's date in "YYYY-MM-DD" format
+            const todaysEvents = eventsFromServer.filter(event => event.start === today);
+
+            const messageDiv = document.getElementById('notificationMessage');
+
+            if (todaysEvents.length > 0) {
+                // If there are events today, display them in a list
+                messageDiv.innerHTML = "<ul>" + 
+                    todaysEvents.map(event => `<li>${event.title}: ${event.description}</li>`).join('') + 
+                    "</ul>";
+            } else {
+                // If there are no events today, display a message
+                messageDiv.textContent = "There are no events scheduled for today.";
+            }
+
+            // Show the notification modal with the message
+            document.getElementById('notificationModal').style.display = 'block';
+        }
+
+        function closeNotification() {
+            document.getElementById('notificationModal').style.display = 'none';
+        }
+
+
         let calendarEl = document.getElementById('calendar');
         let eventsFromServer = {{ events | tojson }};
         let selectedEvent = null;
