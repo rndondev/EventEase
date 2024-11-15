@@ -11,10 +11,12 @@
         .modal-header, .modal-footer { padding: 10px; }
         .modal-footer { text-align: right; }
         .notification-modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); }
-    .notification-content { background-color: #fff; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; text-align: center; }
-        /* Remove bullets from lists in the notification modal */
-    .notification-content ul { list-style-type: none; padding: 0; margin: 0; }
-    .notification-content li { margin: 5px 0; }
+        .notification-content { background-color: #fff; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; text-align: center; }
+            /* Remove bullets from lists in the notification modal */
+        .notification-content ul { list-style-type: none; padding: 0; margin: 0; }
+        .notification-content li { margin: 5px 0; }
+        .todo-item { display: flex; align-items: center; margin-bottom: 5px; }
+        .delete-todo-button { margin-left: 10px; background-color: red; color: white; border: none; cursor: pointer; padding: 5px; }
 
     </style>
 </head>
@@ -131,22 +133,39 @@
         }
 
         function addTodoItem(text = '', done = false) {
-            let container = document.getElementById('todoListContainer');
-            let todoDiv = document.createElement('div');
-            let checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.checked = done;
-            checkbox.className = 'todo-checkbox';
-            
-            let input = document.createElement('input');
-            input.type = 'text';
-            input.value = text;
-            input.className = 'todo-text';
+        let container = document.getElementById('todoListContainer');
+        
+        let todoDiv = document.createElement('div');
+        todoDiv.className = 'todo-item';
 
-            todoDiv.appendChild(checkbox);
-            todoDiv.appendChild(input);
-            container.appendChild(todoDiv);
-        }
+        let checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = done;
+        checkbox.className = 'todo-checkbox';
+
+        let input = document.createElement('input');
+        input.type = 'text';
+        input.value = text;
+        input.className = 'todo-text';
+
+        let deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.className = 'delete-todo-button';
+        deleteButton.onclick = function() {
+            deleteTodoItem(todoDiv);
+        };
+
+        todoDiv.appendChild(checkbox);
+        todoDiv.appendChild(input);
+        todoDiv.appendChild(deleteButton);
+
+        container.appendChild(todoDiv);
+    }
+
+    // deleteTodoItem function to remove a to-do item
+    function deleteTodoItem(todoDiv) {
+        todoDiv.remove();
+    }
 
         document.getElementById('saveEventBtn').addEventListener('click', function() {
     let eventTitle = document.getElementById('eventTitle').value;
